@@ -1,0 +1,6 @@
+gymnasium==1.1.1
+torch
+torch-geometric
+ray[rllib]
+stable-baselines3[extra]
+networkx
