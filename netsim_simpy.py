@@ -3,30 +3,10 @@ import numpy as np
 import gymnasium as gym
 from gymnasium import spaces
 import random
-from constants_target import PORTS_TERMINAL, NODES, ROUTE_LEGS, ROUTES, OWN_VESSELS, DISTANCES, PORTS_TERMINAL
-from vars import * 
-# ---------------------------
-# Core domain objects
-# ---------------------------
-
-
-
-# ---------------------------
-# Demand / supply generator
-# ---------------------------
-
-def sample_distribution(spec: Dict[str, Any], rng: random.Random) -> float:
-    dist = spec.get("dist", "normal")
-    if dist == "normal":
-        return max(0.0, rng.gauss(spec.get("mu", 0.0), spec.get("sigma", 1.0)))
-    elif dist == "uniform":
-        return rng.uniform(spec.get("low", 0.0), spec.get("high", 1.0))
-    elif dist == "poisson":
-        return float(np.random.poisson(spec.get("lam", 1.0)))
-    else:
-        return rng.random()
-
-
+from constants_target import *
+from DataClasses import *
+#import DataClasses.Node
+from tools.utils import sample_distribution
 # ---------------------------
 # Gymnasium + SimPy environment
 # ---------------------------
@@ -38,18 +18,20 @@ class MaritimeSimEnv(gym.Env):
     """
     metadata = {"render_modes": ["human"]}
 
-    def __init__(self, nodes, routes, vessels, products, fuel, time_step=1.0, seed=None):
+    def __init__(self, time_step=1.0, seed=None, **kwarg):
+        
         super().__init__()
         self.time_step = time_step
         self.rng = random.Random(seed)
         np.random.seed(seed or 0)
 
         # core data
-        self.nodes = {n.id: n for n in nodes}
-        self.routes = {r.id: r for r in routes}
-        self.vessels = {v.id: v for v in vessels}
-        self.products = {p.id: p for p in products}
-        self.fuel = fuel
+        self.nodes = kwarg.get('node_list', {})
+        self.routes = kwarg.get('route_list', {})
+        self.route_legs = kwarg.get('route_legs_list', {})
+        self.vessels = kwarg.get('vessel_list', {})
+        self.products = kwarg.get('product_list', {})
+        self.fuel = kwarg.get('fuel_list', {})
 
         # simpy environment
         self.simenv = simpy.Environment()
@@ -57,8 +39,8 @@ class MaritimeSimEnv(gym.Env):
         self.episode_step = 0
 
         # inventory and demand
-        self.node_inventory: Dict[Tuple[str, str], float] = {}
-        self.demand_specs: Dict[Tuple[str, str], Dict[str, Any]] = {}
+        self.node_inventory = {}
+        self.demand_specs = {}
 
         self.delivered = 0.0
         self.costs = 0.0
@@ -66,9 +48,10 @@ class MaritimeSimEnv(gym.Env):
         # ------------------
         # Define Gym spaces
         # ------------------
-        self.num_vessels = len(vessels)
-        self.num_routes = len(routes)
+        self.num_vessels = len(self.vessels)
+        self.num_routes = len(self.routes)
         # discrete action per vessel: 0=idle, 1..num_routes = route choice
+        # NEED TO CHANGE IT 
         self.action_space = spaces.MultiDiscrete([self.num_routes + 1] * self.num_vessels)
         # observation space is simplified continuous vector (time, delivered, costs)
         self.observation_space = spaces.Box(
@@ -96,16 +79,14 @@ class MaritimeSimEnv(gym.Env):
         self.episode_step = 0
         self.delivered = 0.0
         self.costs = 0.0
-        for v in self.vessels.values():
-            v.cargo = {}
-            v.location = random.choice(list(self.nodes.values()))
         obs = self._get_obs()
         info = {}
         return obs, info
 
     def step(self, action):
         # interpret multi-vessel discrete actions
-        route_ids = list(self.routes.keys())
+        #route_ids = list(self.routes.keys())
+        '''
         for i, v_id in enumerate(self.vessels.keys()):
             a = action[i]
             vessel = self.vessels[v_id]
@@ -135,6 +116,10 @@ class MaritimeSimEnv(gym.Env):
         terminated = False
         truncated = False
         info = {}
+        '''
+        terminated = True
+        truncated = False
+        reward = 100
         return obs, reward, terminated, truncated, info
 
     def _get_obs(self):
@@ -151,17 +136,23 @@ class MaritimeSimEnv(gym.Env):
 # ---------------------------
 
 def build_demo_env(seed=0):
-    nA = Node("A", "port_load")
-    nB = Node("B", "port_unload")
-    legAB = RouteLeg(nA, nB, distance=100, base_travel_time=2, congestion_factor=0.5)
-    route = Route("A->B", [legAB])
-    v1 = Vessel("V1", 100, 500)
-    fuel = Fuel(1.0)
-    prod = Product("oil")
-    env = MaritimeSimEnv([nA, nB], [route], [v1], [prod], fuel, time_step=1.0, seed=seed)
-    env.set_node_inventory("A", "oil", 1000)
-    env.set_node_inventory("B", "oil", 0)
-    env.set_demand_spec("B", "oil", {"dist": "normal", "mu": 10, "sigma": 2})
+    params = {}
+    params['node_list'] = [Node(id = node_id, **node_data) for node_id, node_data in NODES.items()]
+    params['route_legs_list'] = [RouteLeg(origin = origin_id, destination = destination_id, **route_legs_data) for (origin_id, destination_id), route_legs_data in ROUTE_LEGS.items()]
+    #RouteLeg(nA, nB, distance=100, base_travel_time=2, congestion_factor=0.5)
+    params['route_list'] = [Route(id = route_id, **route_data) for route_id, route_data in ROUTES.items()]
+    #Route("A->B", [legAB])
+    params['vessel_list'] = [Vessel(id = vessel_id, **vessel_data) for vessel_id, vessel_data in OWN_VESSELS.items()] 
+    #Vessel("V1", 100, 500)
+    params['fuel_list'] = [Fuel(id = fuel_id, **fuel_data) for fuel_id, fuel_data in FUELS.items()]
+    #Fuel(1.0)    
+    params['product_list'] = [Product(id = product_id, **product_data) for product_id, product_data in PRODUCTS.items()]
+    
+    #Product("oil")
+    env = MaritimeSimEnv(time_step=1.0, seed=seed, **params)
+    #env.set_node_inventory("A", "oil", 1000)
+    #env.set_node_inventory("B", "oil", 0)
+    #env.set_demand_spec("B", "oil", {"dist": "normal", "mu": 10, "sigma": 2})
     return env
 
 # ---------------------------
@@ -178,3 +169,5 @@ if __name__ == "__main__":
         obs, reward, done, trunc, info = env.step(action)
         print(f"Step {step+1}: action={action}, obs={obs}, reward={reward:.3f}")
         env.render()
+
+
