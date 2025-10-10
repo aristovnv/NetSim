@@ -1,4 +1,4 @@
-PORTS_TERMINAL = {
+NODES = {
     'Houston': {
         'berth_length': 100,
         'max_capacity': 5,
@@ -96,7 +96,7 @@ PORTS_TERMINAL = {
     }
 }  
 
-NODES = {
+NODES_OLD = {
     # Main Terminals (your existing ones)
     'NewYork': {'type': 'terminal', 'region': 'north_atlantic'},
     'Houston': {'type': 'terminal', 'region': 'gulf_of_mexico'},
@@ -475,5 +475,76 @@ OWN_VESSELS = {
         'cargo_types': ['Petrol', 'Diesel', 'Jet_Fuel'],
         'tank_configuration': 'double_hull',
         'pump_capacity': 1500,
+    }
+}
+
+FUELS = {
+    "heavy_fuel_oil": {"co2": 3.114, "kwt": 34},
+    "marine_gas_oil": {"co2": 3.206, "kwt": 36},
+    "liquefied_natural_gas": {"co2": 2.750, "kwt": 45},
+    "liquefied_petroleum_gas": {"co2": 1.500, "kwt": 42},
+    "methanol": {"co2": 1.370, "kwt": 38},
+    "ethanol": {"co2": 1.470, "kwt": 37},
+    "bio_diesel": {"co2": 0.180, "kwt": 35},
+    "hydrogen_grey": {"co2": 10.0, "kwt": 120},
+    "hydrogen_green": {"co2": 0.0, "kwt": 120},
+    "ammonia_grey": {"co2": 0.0, "kwt": 18},
+    "ammonia_green": {"co2": 0.0, "kwt": 18},
+    "nuclear": {"co2": 0.0, "kwt": 0},
+    "electric_battery": {"co2": 0.0, "kwt": 0},
+    "hybrid_diesel_electric": {"co2": 2.100, "kwt": 32},
+    "lng_bio_blend": {"co2": 1.800, "kwt": 40},
+    "synthetic_diesel": {"co2": 0.050, "kwt": 36}
+}
+
+PRODUCTS = {
+    "crude_oil_heavy": {
+        "density": 0.92,
+        "type": "crude",
+        "hazard_level": "medium",
+        "evaporation_rate": 0.02
+    },
+    "crude_oil_light": {
+        "density": 0.82,
+        "type": "crude",
+        "hazard_level": "medium",
+        "evaporation_rate": 0.05
+    },
+    "fuel_oil_380": {
+        "density": 0.98,
+        "type": "refined",
+        "hazard_level": "high",
+        "viscosity": 380
+    },
+    "marine_gas_oil": {
+        "density": 0.85,
+        "type": "refined",
+        "hazard_level": "medium",
+        "flash_point": 60
+    },
+    "gasoline": {
+        "density": 0.74,
+        "type": "light_refined",
+        "hazard_level": "high",
+        "evaporation_rate": 0.15,
+        "flash_point": -43
+    },
+    "jet_fuel": {
+        "density": 0.81,
+        "type": "light_refined",
+        "hazard_level": "medium", 
+        "flash_point": 38
+    },
+    "liquefied_natural_gas": {
+        "density": 0.45,
+        "type": "cryogenic",
+        "hazard_level": "high",
+        "storage_temp": -162
+    },
+    "liquefied_petroleum_gas": {
+        "density": 0.55,
+        "type": "pressurized",
+        "hazard_level": "high",
+        "storage_pressure": 8
     }
 }

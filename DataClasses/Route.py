@@ -1,13 +1,11 @@
 # Routes - the set of Route Legs to get from point A to Point B. Could be several sets for one A-B 
 from dataclasses import dataclass
-import RouteLeg
 import random
 
 @dataclass
 class Route:
-    def __init__(self, id, legs, **kwargs):
+    def __init__(self, id, **kwargs):
         self.id = id
-        self.legs = legs
         
         # Route composition
         self.nodes = kwargs.get('nodes', [])

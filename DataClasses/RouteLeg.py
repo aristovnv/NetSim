@@ -1,23 +1,13 @@
 # Edge properties
-import Node
 import random
+from .Node import Node
 from dataclasses import dataclass
 
-@dataclass
-class RouteLeg:
-    def __init__(self, origin: Node, destination: Node, distance=1.0, base_travel_time=1.0, congestion_factor=0.0):
-        self.origin = origin
-        self.destination = destination
-        self.distance = distance
-        self.base_travel_time = base_travel_time
-        self.congestion_factor = congestion_factor
-
-    def travel_time(self):
-        return self.base_travel_time + random.random() * self.congestion_factor
 
 @dataclass
 class RouteLeg:
     def __init__(self, origin, destination, **kwargs):
+        
         self.origin = origin
         self.destination = destination
         
@@ -70,6 +60,9 @@ class RouteLeg:
         
         # Store any additional attributes
         self.additional_attributes = kwargs
+
+    def travel_time(self):
+        return self.base_travel_time + random.random() * self.congestion_factor
 
     def travel_time(self, vessel_speed = None) -> float:
         """Calculate travel time considering congestion and vessel speed"""
