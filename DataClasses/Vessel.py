@@ -31,9 +31,12 @@ class Vessel:
         self.tank_configuration = kwargs.get('tank_configuration', 'Unknown')
         self.pump_capacity = kwargs.get('pump_capacity', 0)
         
+        # our ship went to loan
+        self.is_in_loan = kwargs.get('is_in_loan', False)
+        self.days_left_in_loan = kwargs.get('days_left_in_loan', 0)
         # Store any additional attributes
         self.additional_attributes = kwargs
-
+        
     def __str__(self):
         return f"{self.type} (IMO: {self.imo_number}) - {self.flag} Flag"
 
@@ -63,6 +66,23 @@ class Vessel:
     def can_carry_cargo_type(self, cargo_type):
         """Check if vessel can carry specific cargo type"""
         return cargo_type in self.cargo_types
+    
+    # LOAN HANDLING
+    def loaned(self, days):
+        self.is_in_loan = True
+        self.days_left_in_loan = days
+        self.update_loan_qty_times = 0
+
+    def return_from_loan(self):
+        self.is_in_loan = False
+        self.update_loan_qty_times = 0
+
+    def decrease_loan_days(self):
+        self.days_left_in_loan -= 1 
+
+    def update_loan_days(self, days):
+        self.days_left_in_loan = days    
+        self.update_loan_qty_times += 1
 
     def get_vessel_info(self):
         """Return comprehensive vessel information"""
