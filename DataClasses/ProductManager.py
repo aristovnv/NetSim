@@ -20,11 +20,11 @@ class ProductManager:
         node_products_dict: { node_id: [products] }
         """
         for node_id, products in node_products_dict.items():
-            mapper = ScoreMapper(f"product_node_{node_id}")
+            mapper = ScoreMapper()
             def score_fn(p):
                 # Example: margin-based
                 return p.revenue - p.cost
-            mapper.build(products, self.min_val, self.max_val, self.score_fn)
+            mapper.build(products, self.score_fn, self.min_val, self.max_val)
             self.product_mappers[node_id] = mapper
 
     def decode(self, node_id, score, remove_if = True):

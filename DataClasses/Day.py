@@ -98,7 +98,13 @@ class Day:
         """Move to the next day, updating all properties"""
         next_date = self._date + datetime.timedelta(days=1)
         return Day(day=next_date.day, month=next_date.month, year=next_date.year)
-    
+
+    def add_days(self, days) -> Self:
+        """Move to the next day, updating all properties"""
+        next_date = self._date + datetime.timedelta(days=days)
+        return Day(day=next_date.day, month=next_date.month, year=next_date.year)
+
+
     def __str__(self) -> str:
         return f"{self.day:02d}/{self.month:02d}/{self.year} ({self.day_of_week.name})"
     

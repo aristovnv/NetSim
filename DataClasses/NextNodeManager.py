@@ -20,11 +20,11 @@ class NextNodeManager:
         Each 'next node' object could include distance, expected profit, etc.
         """
         for node_id, next_nodes in transition_dict.items():
-            mapper = ScoreMapper(f"next_from_{node_id}")
+            mapper = ScoreMapper()
             def score_fn(n):
                 # Example: prefer closer + profitable nodes
                 return n.expected_profit / (1 + n.distance)
-            mapper.build(next_nodes, self.min_val, self.max_val, self.score_fn)
+            mapper.build(next_nodes, self.score_fn, self.min_val, self.max_val)
             self.node_mappers[node_id] = mapper
 
     def decode(self, current_node, score, remove_if = True):

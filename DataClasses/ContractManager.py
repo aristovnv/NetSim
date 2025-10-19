@@ -21,9 +21,9 @@ class ContractManager:
         node_contract_dict: { node_id: [contracts] }
         """
         for node_id, contracts in node_contract_dict.items():
-            mapper = ScoreMapper(f"contract_node_{node_id}")
+            mapper = ScoreMapper()
             def score_fn(p):
                 # Example: margin-based
                 return p.revenue - p.cost
-            mapper.build(contracts, self.min_val, self.max_val, self.score_fn)
+            mapper.build(contracts, self.score_fn, self.min_val, self.max_val)
             self.contract_mappers[node_id] = mapper

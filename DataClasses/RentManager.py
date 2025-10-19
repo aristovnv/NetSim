@@ -19,11 +19,11 @@ class RentManager:
         Each vessel should have .id, .cost_per_day, .capacity, etc.
         """
         for node_id, rent in node_rent_dict.items():
-            mapper = ScoreMapper(f"rent_node_{node_id}")
+            mapper = ScoreMapper()
             def score_fn(v):
                 # Example scoring function — customize freely
                 return v.capacity / v.cost_per_day
-            mapper.build(rent, self.min_val, self.max_val, self.score_fn)
+            mapper.build(rent, self.score_fn, self.min_val, self.max_val)
             self.rent_mappers[node_id] = mapper
 
     def decode(self, node_id, score, remove_if = True):
