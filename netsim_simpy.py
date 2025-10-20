@@ -11,6 +11,7 @@ from tools.utils import sample_distribution
 import ray
 from ray import tune
 from ray.rllib.algorithms.ppo import PPOConfig
+from ray.tune.registry import register_env
 from tools import StepDataGenerator
 #remove for running
 #from .DataClasses import Vessel, Node, Fuel, Product, Route, RouteLeg, RentManager,ContractManager,ProductManager, NextNodeManager
@@ -29,6 +30,8 @@ RENT_SCORE_MIN_VAL = -200
 RENT_SCORE_MAX_VAL = 200
 
 TERMINAL_NODES = [Node("Rotterdam"), Node("Brazil"), Node("Africa"), Node("Houston"), Node("NewYork")]
+
+RANDOM_SIMULATION = True
 def get_fading_prob(update_num):
     # Define probability for each update step 
     prob_map = {
@@ -484,28 +487,29 @@ def build_demo_env(seed=0):
 # ---------------------------
 # Run demo
 # ---------------------------
-
+register_env("MaritimeSimEnv-v0", lambda config: MaritimeSimEnv(config))
 if __name__ == "__main__":
     env = build_demo_env()
     obs, info = env.reset()
     print("Initial obs:", obs)
-    for step in range(5):
-        # random action (0 = idle, 1 = route)
-        action = env.action_space.sample()
-        obs, reward, done, trunc, info = env.step(action)
-        print(f"Step {step+1}: action={action}, obs={obs}, reward={reward:.3f}")
-        env.render()
+    if RANDOM_SIMULATION: 
+        for step in range(5):
+            # random action (0 = idle, 1 = route)
+            action = env.action_space.sample()
+            obs, reward, done, trunc, info = env.step(action)
+            print(f"Step {step+1}: action={action}, obs={obs}, reward={reward:.3f}")
+            env.render()
 
+        exit()
+    
     ray.init(ignore_reinit_error=True)
 
-    config = (
+    algo = (
         PPOConfig()
-        .environment(env=build_demo_env(), env_config={"max_steps": 50})
+        .environment(env="MaritimeSimEnv-v0", env_config={"max_steps": 50})
         .env_runners(num_env_runners=2)
-        .training(model={"fcnet_hiddens": [64, 64]}, train_batch_size=4000)
+        .training(model={"fcnet_hiddens": [64, 64]}, train_batch_size=4000).build()
     )
-
-    algo = config.build()
 
     for i in range(5):
         result = algo.train()

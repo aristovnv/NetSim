@@ -126,8 +126,8 @@ class Vessel:
         requested_qty = qty_percent * self.cargo_capacity
         
         # Check if we can load (different product or same product with space)
-        if self.product is not None and self.product.id != product.id:
-            return 0.0  # Cannot load different product
+        if self.product is None or self.product.id != product.id:
+                return 0.0  # Cannot load different product
         
         # Calculate available space
         available_space = self.cargo_capacity - self.product_qty

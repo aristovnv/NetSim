@@ -14,6 +14,8 @@ class ContractManager:
         self.contract_mappers = {}
 
     def decode(self, current_node, score, remove_if = True):
+        if current_node is None:
+            return None
         if current_node.id in self.contract_mappers.keys():
             print(f"return is {self.contract_mappers[current_node.id].decode(score, False)}")
             return self.contract_mappers[current_node.id].decode(score, remove_if)
