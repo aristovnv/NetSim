@@ -14,7 +14,11 @@ class ContractManager:
         self.contract_mappers = {}
 
     def decode(self, current_node, score, remove_if = True):
-        return self.contract_mappers[current_node].decode(score, remove_if)
+        if current_node.id in self.contract_mappers.keys():
+            print(f"return is {self.contract_mappers[current_node.id].decode(score, False)}")
+            return self.contract_mappers[current_node.id].decode(score, remove_if)
+        else:
+            return None
 
     def build_for_nodes(self, node_contract_dict):
         """
@@ -26,4 +30,5 @@ class ContractManager:
                 # Example: margin-based
                 return p.revenue - p.cost
             mapper.build(contracts, self.score_fn, self.min_val, self.max_val)
-            self.contract_mappers[node_id] = mapper
+        print(f"mapper is {mapper}")
+            

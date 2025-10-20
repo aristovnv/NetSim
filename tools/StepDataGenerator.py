@@ -91,14 +91,15 @@ class StepDataGenerator:
                 days_ahead = random.randint(1, 14)
                 demands.append(Node(
                     id = node.id,
-                    demand_product = product,
+                    demand_product = Product(id = product.id,
                     demand_qty = qty,
                     demand_revenue = revenue,
                     demand_start_day = self.current_day.add_days(days_ahead),
                     days_min = days_min,
-                    days_max = days_max
+                    days_max = days_max)
                 ))
             data[node.id] = demands
+        #print(f"DATA IS {data}")
         return data
 
     def get_rental_list(self):
@@ -154,7 +155,7 @@ class StepDataGenerator:
                 ))
                 #product = random.choice(self.products)
                 contracts.append(Contract(
-                    id = f"{node}_{k}",
+                    id = f"{node.id}_{k}",
                     vessel = vessel,
                     final_node = node,
                     revenue_per_day = revenue_per_day,

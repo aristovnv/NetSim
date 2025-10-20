@@ -1,6 +1,7 @@
 # Vessels
 
 from dataclasses import dataclass
+PENALTY_FOR_UNLOADING_EMPTY_VESSEL = 50000
 
 @dataclass
 class Vessel:
@@ -44,6 +45,19 @@ class Vessel:
         self.product_qty = kwargs.get('product_qty', 0.0)
         self.product = kwargs.get('product', None)
         self.current_node = kwargs.get('current_node', None)
+
+        self.next_node = kwargs.get('next_node', None)
+
+        # we rent the ship 
+        self.is_in_rent = kwargs.get('is_in_rent', False)
+        self.days_left_in_rent = kwargs.get('days_left_in_rent', 0)
+        self.days_left_in_rent_original = kwargs.get('days_left_in_rent_original', 0)
+        self.update_rent_qty_times = kwargs.get('update_rent_qty_times',0)
+        self.rent_cost = kwargs.get('cost', 0)
+        self.rent_revenue = kwargs.get('revenue', 0)
+        self.rent_demurrage_rate = kwargs.get('demurrage', 0)
+        self.total_days_in_rent = kwargs.get('total_days_in_rent', 0)
+
         # Store any additional attributes
         self.additional_attributes = kwargs
         
@@ -140,6 +154,9 @@ class Vessel:
         if qty_percent < 0 or qty_percent > 1:
             raise ValueError("qty_percent must be between 0.0 and 1.0")
         
+        if self.product is None:
+            return PENALTY_FOR_UNLOADING_EMPTY_VESSEL
+
         # Check if we have the requested product
         if self.product.id != product.id or self.product_qty == 0:
             return 0.0

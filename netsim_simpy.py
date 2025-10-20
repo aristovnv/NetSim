@@ -28,7 +28,7 @@ PRODUCT_SCORE_MAX_VAL = 200
 RENT_SCORE_MIN_VAL = -200 
 RENT_SCORE_MAX_VAL = 200
 
-
+TERMINAL_NODES = [Node("Rotterdam"), Node("Brazil"), Node("Africa"), Node("Houston"), Node("NewYork")]
 def get_fading_prob(update_num):
     # Define probability for each update step 
     prob_map = {
@@ -64,8 +64,7 @@ class MaritimeSimEnv(gym.Env):
     available_vessel_types = ["Panamax", "Capesize", "Handysize", "Supramax", "VLCC"]
         
     # Terminal nodes (example)
-    terminal_nodes = [Node("Rotterdam"), Node("Singapore"), Node("Shanghai"), Node("Houston"), Node("Hamburg"), 
-                              Node("Dubai"), Node("Tokyo"), Node("Los Angeles"), Node("Antwerp"), Node("Hong Kong")]
+    terminal_nodes = TERMINAL_NODES
     def __init__(self, time_step=1.0, seed=None, **kwarg):
         
         super().__init__()
@@ -76,11 +75,17 @@ class MaritimeSimEnv(gym.Env):
 
         # core data
         self.nodes = kwarg.get('node_list', {})
+        self.node_map = {node.id: node for node in self.nodes}
         self.routes = kwarg.get('route_list', {})
+        self.route_map = {route.id: route for route in self.routes}
         self.route_legs = kwarg.get('route_legs_list', {})
+        #self.route_leg_map = {route_leg.id: route_leg for route_leg in self.route_legs}
         self.vessels = kwarg.get('vessel_list', {})
+        self.vessel_map = {vessel.id: vessel for vessel in self.vessels}
         self.products = kwarg.get('product_list', {})
+        self.product_map = {product.id: product for product in self.products}
         self.fuel = kwarg.get('fuel_list', {})
+        self.fuel_map = {fuel.id: fuel for fuel in self.fuel}
 
         # simpy environment
         self.simenv = simpy.Environment()
@@ -179,7 +184,7 @@ class MaritimeSimEnv(gym.Env):
         # Build fresh mapper for this step
         self.node_mgr.build_for_nodes(stepDataGenerator.get_next_node_list())
         # Manager knows how to score vessels
-        self.product_mgr = ProductManager(score_fn=lambda v: 1000, min_val=PRODUCT_SCORE_MIN_VAL, max_val=PRODUCT_SCORE_MAX_VAL)
+        self.product_mgr = ProductManager(score_fn=lambda v: v.demand_revenue, min_val=PRODUCT_SCORE_MIN_VAL, max_val=PRODUCT_SCORE_MAX_VAL)
         # Build fresh mapper for this step
         self.product_mgr.build_for_nodes(stepDataGenerator.get_next_node_list())
         # Manager knows how to score vessels
@@ -202,7 +207,7 @@ class MaritimeSimEnv(gym.Env):
             product= self.get_product(next_node, decoded_actions['product'])
             if picked_action == 'loan':
 
-                contract = self.get_loan_contract(vessel, decoded_actions['loan_contract'])
+                contract = self.get_loan_contract(vessel.current_node, decoded_actions['loan_contract'])
                 self.ship_to_loan(vessel, contract)
 
             elif picked_action == 'unload':
@@ -222,7 +227,10 @@ class MaritimeSimEnv(gym.Env):
 
         #remove vessels that are not leased        
         for v in vessels_to_remove:
-            self.vessels.remove(v)
+            vessel = self.vessel_map.pop(v.id, None)
+            if vessel:
+                self.vessels.remove(vessel) 
+
         for node in self.nodes:
             action_probs = self.get_action_probs(obj = node, isVessel = False)
             decoded_actions = self.decode_vector_to_action(action_probs, False)
@@ -398,7 +406,7 @@ class MaritimeSimEnv(gym.Env):
                 vessel.update_rent_days(1)
         return False
 
-    def get_loan_contract(self, encoded_loan, node):
+    def get_loan_contract(self, node, encoded_loan):
         """
             Returns decoded contract from the list        
         """
@@ -406,16 +414,27 @@ class MaritimeSimEnv(gym.Env):
         #assert 1==2, "function get_loan_contract is not implemented"
 
     def ship_to_loan(self, vessel, contract):
-        vessel.loaned(contract.days)
+        if contract is None:
+            print(f"vessel {vessel} can't be loaned - no available contracts")
+        else:
+            vessel.loaned(contract.days)
 
     def empty_ship(self, vessel, product, unload_percent):
         vessel.unload(product, unload_percent)        
         
     def get_product(self, node, product):        
-        return self.product_mgr.decode(node, product, remove_if=True)
+        idx = self.product_mgr.decode(node, product, remove_if=True)
+        if idx is None:
+            print(f"for {node} there is no available products")
+            return None
+        return self.product_map[idx]
         
     def get_next_node(self, node, next_node):
-        return self.node_mgr.decode(node, next_node, remove_if=True)
+        idx = self.node_mgr.decode(node, next_node, remove_if=True)
+        if idx is None:
+            print(f"for {node} there is no next_node")
+            return None
+        return self.node_map[idx]
     
     def load_product(self, vessel, product, load_percent, next_node):
         vessel.load(product, load_percent)
@@ -432,6 +451,7 @@ class MaritimeSimEnv(gym.Env):
         vessel = contract.vessel
         vessel.rented(contract.days, product, product_qty, next_node, contract.cost, revenue, contract.demurrage)
         self.vessels.append(vessel)
+        self.vessel_map[vessel.id] = vessel
         
             
 
@@ -448,7 +468,7 @@ def build_demo_env(seed=0):
     #RouteLeg(nA, nB, distance=100, base_travel_time=2, congestion_factor=0.5)
     params['route_list'] = [Route(id = route_id, **route_data) for route_id, route_data in ROUTES.items()]
     #Route("A->B", [legAB])
-    params['vessel_list'] = [Vessel(id = vessel_id, **vessel_data) for vessel_id, vessel_data in OWN_VESSELS.items()] 
+    params['vessel_list'] = [Vessel(id = vessel_id, current_node=random.choice(TERMINAL_NODES), **vessel_data) for vessel_id, vessel_data in OWN_VESSELS.items()] 
     #Vessel("V1", 100, 500)
     params['fuel_list'] = [Fuel(id = fuel_id, **fuel_data) for fuel_id, fuel_data in FUELS.items()]
     #Fuel(1.0)    
@@ -481,7 +501,7 @@ if __name__ == "__main__":
     config = (
         PPOConfig()
         .environment(env=build_demo_env(), env_config={"max_steps": 50})
-        .rollouts(num_rollout_workers=2)
+        .env_runners(num_env_runners=2)
         .training(model={"fcnet_hiddens": [64, 64]}, train_batch_size=4000)
     )
 

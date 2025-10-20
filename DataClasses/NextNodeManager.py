@@ -28,4 +28,6 @@ class NextNodeManager:
             self.node_mappers[node_id] = mapper
 
     def decode(self, current_node, score, remove_if = True):
-        return self.node_mappers[current_node].decode(score, remove_if)
+        if current_node is None:
+            return None
+        return self.node_mappers[current_node.id].decode(score, remove_if)

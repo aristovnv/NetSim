@@ -13,6 +13,10 @@ class ScoreMapper:
         min_val / max_val: scale raw score into [0,1]
         """
         raw_scores = [score_fn(e) for e in entries]
+        for e in entries:
+            s = score_fn(e)
+            if s is None:
+                print(f"⚠️ Score None for: {e.id} as  min_val {min_val} and {max_val} and raw_Scores {s}")
         # scale into [0,1]
         scaled_scores = np.clip([(r - min_val) / (max_val - min_val) for r in raw_scores], 0, 1)
         ids = [e.id for e in entries]
@@ -24,6 +28,8 @@ class ScoreMapper:
         idx = bisect.bisect_left(self.sorted_scores, score)
         if idx >= len(self.sorted_scores):
             idx = len(self.sorted_scores) - 1
+        if idx < 0:
+            return None
         chosen_id = self.id_by_score[idx]
         if remove_if:
             self.remove_by_index(idx)

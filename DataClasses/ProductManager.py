@@ -19,13 +19,21 @@ class ProductManager:
         """
         node_products_dict: { node_id: [products] }
         """
-        for node_id, products in node_products_dict.items():
+        
+        for node_id, products in node_products_dict.items():            
+            all_products = []
+            for p in products:
+                all_products.append(p.demand_product)
             mapper = ScoreMapper()
             def score_fn(p):
-                # Example: margin-based
+                    # Example: margin-based
                 return p.revenue - p.cost
-            mapper.build(products, self.score_fn, self.min_val, self.max_val)
+            mapper.build(all_products, self.score_fn, self.min_val, self.max_val)
             self.product_mappers[node_id] = mapper
 
-    def decode(self, node_id, score, remove_if = True):
-        return self.product_mappers[node_id].decode(score, remove_if)
+    def decode(self, node, score, remove_if = True):
+        #print(f"decoding into {self.product_mappers[node.id].decode(score, remove_if)}")
+        #print(f"score is {score}")
+        if node is None:
+            return None
+        return self.product_mappers[node.id].decode(score, remove_if)

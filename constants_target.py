@@ -16,7 +16,8 @@ NODES = {
         'allowed_operations': {'simultaneous_load_unload': False, 'load_only': True, 'unload_only': False},
         'cleaning_facility': True,
         'emission_control_area': True,
-        'weather_limits': {'max_wind_speed': 50, 'max_wave_height': 3.0}
+        'weather_limits': {'max_wind_speed': 50, 'max_wave_height': 3.0},
+        'Products': {"Crude OIL":{"type": "supply", "cost": 100, 'qty' : 300, 'days_ahead': 5}, "Crude OIL2":{"type": "supply", "cost": 200, 'qty' : 500, 'days_ahead': 5}}
     },
     'Rotterdam': {
         'berth_length': 100,
@@ -35,7 +36,8 @@ NODES = {
         'allowed_operations': {'simultaneous_load_unload': False, 'load_only': True, 'unload_only': False},
         'cleaning_facility': True,
         'emission_control_area': True,
-        'weather_limits': {'max_wind_speed': 50, 'max_wave_height': 3.0}
+        'weather_limits': {'max_wind_speed': 50, 'max_wave_height': 3.0},
+        'Products': {"Crude OIL":{"type": "demand", "revenue": 100, 'qty' : 300, 'days_max': 25}, "Crude OIL2":{"type": "revenue", "cost": 200, 'qty' : 500, 'days_max': 35}}
     },
     'NewYork': {
         'berth_length': 100,
@@ -54,7 +56,8 @@ NODES = {
         'allowed_operations': {'simultaneous_load_unload': False, 'load_only': True, 'unload_only': False},
         'cleaning_facility': True,
         'emission_control_area': True,
-        'weather_limits': {'max_wind_speed': 50, 'max_wave_height': 3.0}
+        'weather_limits': {'max_wind_speed': 50, 'max_wave_height': 3.0},
+        'Products': {"Crude OIL3":{"type": "demand", "revenue": 100, 'qty' : 300, 'days_max': 25}, "Crude OIL4":{"type": "demand", "revenue": 200, 'qty' : 500, 'days_max': 35}}
     },
         'Africa': {
         'berth_length': 100,
@@ -73,7 +76,8 @@ NODES = {
         'allowed_operations': {'simultaneous_load_unload': False, 'load_only': True, 'unload_only': False},
         'cleaning_facility': True,
         'emission_control_area': True,
-        'weather_limits': {'max_wind_speed': 50, 'max_wave_height': 3.0}
+        'weather_limits': {'max_wind_speed': 50, 'max_wave_height': 3.0},
+        'Products': {"Crude OIL4":{"type": "supply", "cost": 100, 'qty' : 300, 'days_max': 25}, "Crude OIL3":{"type": "demand", "revenue": 200, 'qty' : 500, 'days_max': 35}}
     },
         'Brazil': {
         'berth_length': 100,
@@ -92,7 +96,8 @@ NODES = {
         'allowed_operations': {'simultaneous_load_unload': False, 'load_only': True, 'unload_only': False},
         'cleaning_facility': True,
         'emission_control_area': True,
-        'weather_limits': {'max_wind_speed': 50, 'max_wave_height': 3.0}
+        'weather_limits': {'max_wind_speed': 50, 'max_wave_height': 3.0},
+        'Products': {"Crude OIL4":{"type": "supply", "cost": 100, 'qty' : 300, 'days_max': 25}, "Crude OIL3":{"type": "supply", "cost": 200, 'qty' : 500, 'days_max': 35}}
     }
 }  
 
