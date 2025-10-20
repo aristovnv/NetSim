@@ -119,7 +119,7 @@ class MaritimeSimEnv(gym.Env):
         self.node_actions_len = self.node_discrete_actions_len + self.node_continuous_actions_len
 
         self.action_space = spaces.Dict({
-            'discrete': spaces.MultiBinary(self.discrete_actions_len),
+            'discrete': spaces.Discrete(self.discrete_actions_len),
             'continuous': spaces.Box(
                 low=0.0, 
                 high=1.0, 
@@ -128,7 +128,7 @@ class MaritimeSimEnv(gym.Env):
             )
         })
         self.node_action_space = spaces.Dict({
-            'discrete': spaces.MultiBinary(self.node_discrete_actions_len),
+            'discrete': spaces.Discrete(self.discrete_actions_len),
             'continuous': spaces.Box(
                 low=0.0, 
                 high=1.0, 
