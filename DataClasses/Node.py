@@ -41,7 +41,7 @@ class Node:
             'load_only': False, 
             'unload_only': False
         })
-        
+    
         # Facilities & Environmental
         self.cleaning_facility = kwargs.get('cleaning_facility', False)
         self.emission_control_area = kwargs.get('emission_control_area', False)
@@ -49,7 +49,9 @@ class Node:
             'max_wind_speed': float('inf'),
             'max_wave_height': float('inf')
         })
-        
+        # part for generators and getting data
+        self.demand_product = kwargs.get('demand_product', None)
+        self.supply_product = kwargs.get('supply_product', None)
         # Store any additional attributes
         self.additional_attributes = kwargs
 
@@ -57,7 +59,9 @@ class Node:
         return f"Node({self.id}) - {self.type}"
 
     def __repr__(self):
-        return f"Node(id='{self.id}', type='{self.type}', capacity={self.capacity})"
+        attrs = ", ".join(f"{k}={v!r}" for k, v in self.__dict__.items())
+        return f"Node({attrs})"
+        #return f"Node(id='{self.id}', type='{self.type}', capacity={self.capacity})"
 
     def can_handle_product(self, product_type):
         """Check if node can handle specific product type"""
