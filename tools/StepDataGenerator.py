@@ -3,7 +3,7 @@ from dataclasses import dataclass
 import numpy as np
 import random
 
-from DataClasses import Contract, Vessel, Node, Product, Route, Fuel
+from DataClasses import Contract, Vessel, Node, Product, Route, Fuel, Demand, Supply
 
 from datetime import timedelta
 
@@ -33,6 +33,9 @@ class StepDataGenerator:
             "rentals_per_node_std": 1,
             "demand_per_node_mean": 5,
             "demand_per_node_std": 2,
+            "supply_per_node_mean": 5,
+            "supply_per_node_std": 2,
+
             
             # Contract attributes
             "revenue_mean": 20000,
@@ -53,6 +56,8 @@ class StepDataGenerator:
             "qty_std": 80,
             "revenue_demand_mean": 10000,
             "revenue_demand_std": 2000,
+            "cost_supply_mean": 5000,
+            "cost_supply_std": 2000,
         }
 
     # --- Utility for normal distribution draws ---
@@ -165,4 +170,107 @@ class StepDataGenerator:
                 k += 1
 
             data[node.id] = contracts
+        return data
+
+
+    def update_demand_list(self, data, current_date):
+        """Generate demand for some of the nodes"""
+        if data is None:
+            data = {}
+
+        for node in self.nodes:
+            n = max(0, int(self._randn(
+                self.params["demand_per_node_mean"],
+                self.params["demand_per_node_std"]
+            )))
+            demands = []
+            for i in range(n):
+                product = random.choice(self.products)
+                # Generate quantity parameters
+                quantity = max(0, self._randn(
+                    self.params["qty_mean"],
+                    self.params["qty_std"]
+                ))
+                
+                # Generate profit per volume (revenue - cost)
+                revenue = max(0, self._randn(
+                    self.params["revenue_demand_mean"],
+                    self.params["revenue_demand_std"]
+                ))
+                cost = max(0, self._randn(
+                    self.params["cost_supply_mean"],
+                    self.params["cost_supply_std"]
+                ))
+                
+                # Generate dates - start tomorrow, end after random days
+                days_start_from_now = max(1, 10 + int(self._randn(self.params["days_min_mean"], self.params["days_min_std"])))
+                start_date = current_date + timedelta(days=days_start_from_now)
+                days_duration = max(1, days_start_from_now + 11, 10 + int(self._randn(self.params["days_max_mean"], self.params["days_max_std"])))  # Using reasonable defaults
+                end_date = start_date + timedelta(days=days_duration)
+                
+                # Generate ID with date format
+                date_str = current_date.strftime("%Y%m%d")
+                demand_id = f"demand_{node.id}_{date_str}_{i}"
+                
+                demands.append(Demand(
+                    id=demand_id,
+                    product=product,
+                    profit_per_volume=revenue,
+                    max_qty=quantity * 1.1,  # Using + 10% of quantity as max_qty
+                    min_qty=quantity * 0.1,  # 10% of quantity as minimum
+                    quantity=quantity,
+                    start_date=start_date,
+                    end_date=end_date
+                ))
+
+            data[node.id] = demands
+        return data
+
+
+    def update_supply_list(self, data, current_date):
+        """Generate supply for some of the nodes"""
+        if data is None:
+            data = {}
+
+        for node in self.nodes:
+            n = max(0, int(self._randn(
+                self.params["supply_per_node_mean"],
+                self.params["supply_per_node_std"]
+            )))
+            supplies = []
+            for i in range(n):
+                product = random.choice(self.products)
+                # Generate quantity parameters
+                quantity = max(0, self._randn(
+                    self.params["qty_mean"],
+                    self.params["qty_std"]
+                ))
+
+                cost = max(0, self._randn(
+                    self.params["cost_supply_mean"],
+                    self.params["cost_supply_std"]
+                ))
+                
+                # Generate dates - start tomorrow, end after random days
+                days_start_from_now = max(1, int(self._randn(self.params["days_min_mean"], self.params["days_min_std"])))
+                start_date = current_date + timedelta(days=days_start_from_now)
+                days_duration = max(1, days_start_from_now + 1, int(self._randn(self.params["days_max_mean"], self.params["days_max_std"])))  # Using reasonable defaults
+                end_date = start_date + timedelta(days=days_duration)
+                
+                # Generate ID with date format
+                date_str = current_date.strftime("%Y%m%d")
+                supply_id = f"demand_{node.id}_{date_str}_{i}"
+                
+                supplies.append(Supply(
+                    id=supply_id,
+                    product=product,
+                    cost_per_volume=cost,
+                    max_qty=quantity * 1.1,  # Using + 10% of quantity as max_qty
+                    min_qty=quantity * 0.1,  # 10% of quantity as minimum
+                    quantity=quantity,
+                    start_date=start_date,
+                    end_date=end_date
+                ))
+
+            data[node.id] = supplies
         return data

@@ -13,6 +13,7 @@ from ray import tune
 from ray.rllib.algorithms.ppo import PPOConfig
 from ray.tune.registry import register_env
 from tools import StepDataGenerator
+from datetime import date, timedelta
 #remove for running
 #from .DataClasses import Vessel, Node, Fuel, Product, Route, RouteLeg, RentManager,ContractManager,ProductManager, NextNodeManager
 #from .DataClasses import Day
@@ -141,7 +142,10 @@ class MaritimeSimEnv(gym.Env):
         self.observation_space = spaces.Box(
             low=0, high=np.inf, shape=(3,), dtype=np.float32
         )
-
+        self.demand_mgr = {}
+        self.supply_mgr = {}
+        self.travel_time_base = self._initialize_base_travel_times()
+        self.travel_time_cache = {}
     # ------------------
     # Helpers
     # ------------------
@@ -175,9 +179,11 @@ class MaritimeSimEnv(gym.Env):
         # 3. Control that physics works (?)    
         # interpret multi-vessel discrete actions
         #route_ids = list(self.routes.keys())
-        
         self.current_day.add_day()
+        current_travel_times = self.get_travel_time_matrix(self.current_date)
         stepDataGenerator = StepDataGenerator(self.terminal_nodes, self.products, self.vessels, self.current_day)
+        self.demand_mgr = stepDataGenerator.updateDemand(self.demand_mgr, self.current_day)
+        self.supply_mgr = stepDataGenerator.updateSupply(self.supply_mgr, self.current_day)
         # Manager knows how to score vessels
         self.rent_mgr = RentManager(score_fn=lambda v: v.revenue - v.cost_per_day * v.days, min_val=RENT_SCORE_MIN_VAL, max_val=RENT_SCORE_MAX_VAL)
         # Build fresh mapper for this step
@@ -423,7 +429,36 @@ class MaritimeSimEnv(gym.Env):
             vessel.loaned(contract.days)
 
     def empty_ship(self, vessel, product, unload_percent):
-        vessel.unload(product, unload_percent)        
+        qty = vessel.unload(product, unload_percent)     
+ 
+        # for all demands at current node ordered by max_date, profit decreased:
+        node_demand = self.demand_mgr[vessel.current_node]
+        demand_to_remove = {}
+        for demand in node_demand:
+            qty_unloaded, cost_incured, remove_demand = self.decrease_demand(demand, qty) 
+            # remove demand, continue to the next if there is qty_unloaded < qty
+            if remove_demand: 
+                demand_to_remove.append(demand)
+            if abs(qty_unloaded - qty) < 0.01:
+                break
+            else:
+                qty -= qty_unloaded
+
+        for d in demand_to_remove:
+            self.demand_mgr.remove(d) 
+
+        # we also need to add supply
+        if qty > 0.01: 
+            self.supply_mgr = self.add_supply(vessel.current_node, product, qty)
+    
+    def add_supply(self, current_node, product, qty):
+        assert 1==2, "function add_supply is not implemented"
+    
+    def decrease_demand(self, demand, qty):
+        qty_satisfied, profit, remove_demand = demand.decrease_demand(qty, self.current_date)
+        return qty_satisfied, profit, remove_demand
+
+
         
     def get_product(self, node, product):        
         idx = self.product_mgr.decode(node, product, remove_if=True)
@@ -440,8 +475,17 @@ class MaritimeSimEnv(gym.Env):
         return self.node_map[idx]
     
     def load_product(self, vessel, product, load_percent, next_node):
-        vessel.load(product, load_percent)
+        qty = vessel.load(product, load_percent)
         vessel.next_node = next_node
+        # we also need to reduce supply at the moment
+        # logic to decrease supply - by date of expiration or penalty cost?
+        # for all supplies at current node ordered by max_date, penalty decreased:
+        qty_loaded, cost_incured, remove_supply = self.decrease_supply(self.supply_mgr, self.current_day) 
+        # remove supply, continue to the next if there is qty_loaded < qty
+    
+    def decrease_supply(self, supply, qty):
+        qty_loaded, cost_incured, remove_supply = supply.decrease_supply(qty, self.current_date)
+        return qty_loaded, cost_incured, remove_supply
 
     def go_to(self, vessel, next_node):
         vessel.current_node = vessel.next_node
@@ -457,8 +501,63 @@ class MaritimeSimEnv(gym.Env):
         self.vessel_map[vessel.id] = vessel
         
             
+    def _initialize_base_travel_times(self):
+        """Initialize base travel times between all node pairs (5-25 days)"""
+        travel_times = {}
+        node_ids = [node.id for node in self.nodes]
+        
+        for i, node_a in enumerate(node_ids):
+            travel_times[node_a] = {}
+            for j, node_b in enumerate(node_ids):
+                if i == j:
+                    travel_times[node_a][node_b] = 0  # Same node
+                else:
+                    # Random base travel time between 5-25 days
+                    travel_times[node_a][node_b] = random.randint(5, 25)
+        
+        return travel_times
 
 
+    def get_travel_time_matrix(self, current_date):
+        """Get travel time matrix for specific date with 10% variation"""
+        date_key = current_date.isoformat()
+        
+        # Return cached matrix if available
+        if date_key in self.travel_time_cache:
+            return self.travel_time_cache[date_key]
+        
+        # Generate new matrix with daily variation
+        daily_matrix = {}
+        for node_a in self.nodes:
+            node_a_id = node_a.id
+            daily_matrix[node_a_id] = {}
+            
+            for node_b in self.nodes:
+                node_b_id = node_b.id
+                base_time = self.travel_time_base[node_a_id][node_b_id]
+                
+                # Apply 10% variation (-10% to +10%)
+                variation = random.uniform(0.9, 1.1)
+                varied_time = max(1, round(base_time * variation))  # At least 1 day
+                
+                daily_matrix[node_a_id][node_b_id] = varied_time
+        
+        # Cache for this date
+        self.travel_time_cache[date_key] = daily_matrix
+        return daily_matrix
+    
+    def get_travel_time(self, node_a, node_b, current_date):
+        """Get travel time between two specific nodes for a given date"""
+        matrix = self.get_travel_time_matrix(current_date)
+        return matrix[node_a.id][node_b.id]
+    
+    def clear_old_cache(self, keep_days=1):
+        """Optional: Clear cache for old dates to prevent memory issues"""
+        cutoff_date = date.today() - timedelta(days=keep_days)
+        self.travel_time_cache = {
+            k: v for k, v in self.travel_time_cache.items() 
+            if date.fromisoformat(k) >= cutoff_date
+        }
 
 # ---------------------------
 # Demo builder

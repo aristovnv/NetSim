@@ -3,6 +3,10 @@ from dataclasses import dataclass
 
 @dataclass
 class Node:
+    vessels_at_node = None
+    vessels_at_berth = None    
+    demand_at_node = None
+    supply_at_node = None
     def __init__(self, id, **kwargs):
         self.id = id
         self.type = kwargs.get('node_type', 'intermediate')
@@ -52,8 +56,18 @@ class Node:
         # part for generators and getting data
         self.demand_product = kwargs.get('demand_product', None)
         self.supply_product = kwargs.get('supply_product', None)
+
         # Store any additional attributes
         self.additional_attributes = kwargs
+
+        #processing pops
+        self.vessel_map = {vessel.id: vessel for vessel in self.vessels}
+
+        self.vessels_at_node_map = {vessel.id: vessel for vessel in self.vessels_at_node_map}
+        self.vessels_at_berth_map = {vessel.id: vessel for vessel in self.vessels_at_berth_map}
+        self.demand_at_node_map = {demand.id: demand for demand in self.demand_at_node_map}
+        self.supply_at_node_map = {supply.id: supply for supply in self.supply_at_node_map}
+
 
     def __str__(self):
         return f"Node({self.id}) - {self.type}"
@@ -139,3 +153,39 @@ class Node:
             },
             'weather_limits': self.weather_limits
         }
+    
+    def add_vessel_to_node(self, vessel):
+        self.vessels_at_node.append(vessel)
+        self.vessels_at_node_map[vessel.id] = vessel
+
+    def remove_vessel_from_node(self, vessel):        
+        vessel_obj = self.vessels_at_node_map.pop(vessel.id, None)
+        if vessel_obj:
+            self.vessels_at_node.remove(vessel) 
+
+    def add_vessel_to_berth(self, vessel):
+        self.vessels_at_berth.append(vessel)
+        self.vessels_at_berth_map[vessel.id] = vessel
+
+    def remove_vessel_from_berth(self, vessel):
+        vessel_obj = self.vessels_at_berth_map.pop(vessel.id, None)
+        if vessel_obj:
+            self.vessels_at_berth.remove(vessel) 
+
+    def add_supply_to_node(self, supply):
+        self.supply_at_node.append(supply)
+        self.supply_at_node_map[supply.id] = supply
+
+    def remove_supply_from_node(self, supply):
+        supply_obj = self.supply_at_node_map.pop(supply.id, None)
+        if supply_obj:
+            self.supply_at_node.remove(supply) 
+
+    def add_demand_to_node(self, demand):
+        self.demand_at_node.append(demand)
+        self.demand_at_node_map[demand.id] = demand
+
+    def remove_demand_from_node(self, demand):
+        demand_obj = self.demand_at_node_map.pop(demand.id, None)
+        if demand_obj:
+            self.demand_at_node.remove(demand) 
