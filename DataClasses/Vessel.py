@@ -12,6 +12,7 @@ class Vessel:
     next_node = None
     contract = None
     current_node = None
+    cost = 0
     def __init__(self, id, **kwargs):
         # Basic Identification (with defaults)
         self.id = id
@@ -155,14 +156,15 @@ class Vessel:
             raise ValueError("qty_percent must be between 0.0 and 1.0")
         
         if self.product is None:
-            return PENALTY_FOR_UNLOADING_EMPTY_VESSEL
+            return 0.0, PENALTY_FOR_UNLOADING_EMPTY_VESSEL
 
         # Check if we have the requested product
         if self.product.id != product.id or self.product_qty == 0:
-            return 0.0
+            return 0.0, 0.0
         
         # Calculate requested quantity to unload
         requested_qty = qty_percent * self.product_qty
+        original_qty = self.product_qty
         unloaded_qty = min(requested_qty, self.product_qty)
         
         self.product_qty -= unloaded_qty
@@ -170,8 +172,10 @@ class Vessel:
         # If all product is unloaded, clear the product type
         if self.product_qty == 0:
             self.product = None
-        
-        return unloaded_qty
+        original_cost = self.cost
+        self.cost = (self.cost / original_qty) * self.product_qty
+        unloaded_cost = original_cost - self.cost
+        return unloaded_qty, unloaded_cost
     
     def test_load(self, product, qty_percent: float, test_only: bool = True):
         """
@@ -292,7 +296,15 @@ class Vessel:
         self.days_left_in_rent = days    
         self.update_rent_qty_times += 1
 
+    def get_total_cost_of_demand(self):
+        return self.cost 
 
+    def get_unit_cost_of_demand(self):
+        return (self.cost / self.product_qty) 
+
+    def update_demand_cost(self, added_cost):
+        #lump sum of all cost to avoid lost of precision
+        self.cost += added_cost
 
     def get_vessel_info(self):
         """Return comprehensive vessel information"""

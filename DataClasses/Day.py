@@ -104,9 +104,34 @@ class Day:
         next_date = self._date + datetime.timedelta(days=days)
         return Day(day=next_date.day, month=next_date.month, year=next_date.year)
 
+    def isoformat(self):
+        return f"{self.year}{self.month:02}{self.day:02}"
 
     def __str__(self) -> str:
         return f"{self.day:02d}/{self.month:02d}/{self.year} ({self.day_of_week.name})"
     
     def __repr__(self) -> str:
         return f"Day(day={self.day}, month={self.month}, year={self.year})"
+
+    def value(self):
+        return self._date
+    
+    def __gt__(self, other):
+        return self.value() > other.value()
+    
+    def __lt__(self, other):
+        return self.value() < other.value()
+    
+    def __eq__(self, other):
+        return self.value() == other.value()
+    
+    def __ge__(self, other):
+        return self.value() >= other.value()
+    
+    def __le__(self, other):
+        return self.value() <= other.value()
+
+    def __sub__(self, other):
+        if isinstance(other, Day):
+            return (self.value() - other.value()).days
+        return NotImplemented

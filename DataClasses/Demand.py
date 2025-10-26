@@ -23,11 +23,11 @@ class Demand:
     def calculate_penalty(self, deliver_day, qty):
         if deliver_day > self.end_date:
                 #penalty
-            days = (deliver_day - self.end_date).days
+            days = (deliver_day - self.end_date)
             return (self.lump_penalty + days * self.day_penalty) * qty
         elif deliver_day < self.start_date:
                 #penalty
-            days = (self.start_date - deliver_day).days
+            days = (self.start_date - deliver_day)
             return days * self.early_delivering_penalty_per_day * qty
         return 0
     
@@ -37,3 +37,11 @@ class Demand:
     def calc_profit(self, deliver_day, qty):
         return self.calc_revenue(qty) - self.calculate_penalty(deliver_day, qty)
     
+    def decrease_demand(self, qty, current_date):
+        if qty >= self.min_qty and qty <= self.max_qty:
+            self.quantity = 0
+            return qty, self.calc_total_cost(current_date, qty), True
+        elif qty > self.max_qty:
+            self.quantity = 0
+            return self.max_qty, self.calc_total_cost(current_date, self.max_qty), True
+        return qty, self.calc_profit(current_date, qty), False

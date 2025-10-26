@@ -21,6 +21,10 @@ from datetime import date, timedelta
 # Gymnasium + SimPy environment
 # ---------------------------
 
+
+TRANSHIPMENT_ALLOWANCE_DAY = 5
+TRANSHIPMENT_PENALTY_LAMP = 10000
+TRANSHIPMENT_PENALTY_PER_DAY = 5000
 CONTRACT_SCORE_MIN_VAL = -200 
 CONTRACT_SCORE_MAX_VAL = 200
 NODE_SCORE_MIN_VAL = -200 
@@ -29,6 +33,10 @@ PRODUCT_SCORE_MIN_VAL = -200
 PRODUCT_SCORE_MAX_VAL = 200
 RENT_SCORE_MIN_VAL = -200 
 RENT_SCORE_MAX_VAL = 200
+UNLOAD_NOT_AT_NODE_PENALTY = -100000
+LOAD_NOT_AT_NODE_PENALTY = -100000
+PENALTY_FOR_EMPTY_EMPTY_SHIP = -100000
+PENALTY_FOR_LOAD_ZERO_QTY = -100000
 
 TERMINAL_NODES = [Node("Rotterdam"), Node("Brazil"), Node("Africa"), Node("Houston"), Node("NewYork")]
 
@@ -180,10 +188,10 @@ class MaritimeSimEnv(gym.Env):
         # interpret multi-vessel discrete actions
         #route_ids = list(self.routes.keys())
         self.current_day.add_day()
-        current_travel_times = self.get_travel_time_matrix(self.current_date)
+        current_travel_times = self.get_travel_time_matrix(self.current_day)
         stepDataGenerator = StepDataGenerator(self.terminal_nodes, self.products, self.vessels, self.current_day)
-        self.demand_mgr = stepDataGenerator.updateDemand(self.demand_mgr, self.current_day)
-        self.supply_mgr = stepDataGenerator.updateSupply(self.supply_mgr, self.current_day)
+        self.demand_mgr = stepDataGenerator.update_demand_list(self.demand_mgr, self.current_day)
+        self.supply_mgr = stepDataGenerator.update_supply_list(self.supply_mgr, self.current_day)
         # Manager knows how to score vessels
         self.rent_mgr = RentManager(score_fn=lambda v: v.revenue - v.cost_per_day * v.days, min_val=RENT_SCORE_MIN_VAL, max_val=RENT_SCORE_MAX_VAL)
         # Build fresh mapper for this step
@@ -219,8 +227,7 @@ class MaritimeSimEnv(gym.Env):
                 contract = self.get_loan_contract(vessel.current_node, decoded_actions['loan_contract'])
                 self.ship_to_loan(vessel, contract)
 
-            elif picked_action == 'unload':
-
+            elif picked_action == 'unload':                
                 self.empty_ship(vessel, product, decoded_actions["product_qty"])
 
             elif picked_action == 'load':
@@ -429,36 +436,52 @@ class MaritimeSimEnv(gym.Env):
             vessel.loaned(contract.days)
 
     def empty_ship(self, vessel, product, unload_percent):
-        qty = vessel.unload(product, unload_percent)     
- 
-        # for all demands at current node ordered by max_date, profit decreased:
-        node_demand = self.demand_mgr[vessel.current_node]
-        demand_to_remove = {}
-        for demand in node_demand:
-            qty_unloaded, cost_incured, remove_demand = self.decrease_demand(demand, qty) 
-            # remove demand, continue to the next if there is qty_unloaded < qty
-            if remove_demand: 
-                demand_to_remove.append(demand)
-            if abs(qty_unloaded - qty) < 0.01:
-                break
-            else:
-                qty -= qty_unloaded
-
-        for d in demand_to_remove:
-            self.demand_mgr.remove(d) 
-
-        # we also need to add supply
+        
+        qty, cost_of_supply = vessel.unload(product, unload_percent)
+        total_qty = qty
         if qty > 0.01: 
-            self.supply_mgr = self.add_supply(vessel.current_node, product, qty)
-    
-    def add_supply(self, current_node, product, qty):
-        assert 1==2, "function add_supply is not implemented"
-    
+            # for all demands at current node ordered by max_date, profit decreased:
+            if vessel.current_node is None:
+                return UNLOAD_NOT_AT_NODE_PENALTY
+            node_demand = self.demand_mgr[vessel.current_node.id]
+            demand_to_remove = {}
+            for demand in node_demand:
+                qty_unloaded, profit, remove_demand = self.decrease_demand(demand, qty) 
+                # remove demand, continue to the next if there is qty_unloaded < qty
+                if remove_demand: 
+                    demand_to_remove.append(demand)
+                if abs(qty_unloaded - qty) < 0.01:
+                    break
+                else:
+                    qty -= qty_unloaded
+
+            for d in demand_to_remove:
+                self.demand_mgr.remove(d) 
+            total_cost = cost_of_supply
+            cost_of_demand = (total_cost/total_qty) * (total_qty - qty)
+
+            # we also need to add supply
+            if qty > 0.01: 
+                self.supply_mgr[vessel.current_node].append(
+                    Supply(
+                        id=f"supply_{vessel.current_node.id}_{self.current_date.strftime('%Y%m%d')}_from_vessel_{vessel.id}",
+                        product = product,
+                        cost_per_volume = total_cost - cost_of_demand, # need some cost from vessel
+                        max_qty = qty * 1.1,  # Using + 10% of quantity as max_qty
+                        min_qty = qty * 0.1,  # 10% of quantity as minimum
+                        quantity = qty,
+                        lump_penalty = TRANSHIPMENT_PENALTY_LAMP,
+                        day_penalty = TRANSHIPMENT_PENALTY_PER_DAY,
+                        start_date = self.current_day,
+                        end_date = self.current_day  + timedelta(days = TRANSHIPMENT_ALLOWANCE_DAY)
+                ))
+            return profit-cost_of_demand
+        else:
+            return PENALTY_FOR_EMPTY_EMPTY_SHIP
+        
     def decrease_demand(self, demand, qty):
-        qty_satisfied, profit, remove_demand = demand.decrease_demand(qty, self.current_date)
+        qty_satisfied, profit, remove_demand = demand.decrease_demand(qty, self.current_day)
         return qty_satisfied, profit, remove_demand
-
-
         
     def get_product(self, node, product):        
         idx = self.product_mgr.decode(node, product, remove_if=True)
@@ -476,15 +499,38 @@ class MaritimeSimEnv(gym.Env):
     
     def load_product(self, vessel, product, load_percent, next_node):
         qty = vessel.load(product, load_percent)
-        vessel.next_node = next_node
         # we also need to reduce supply at the moment
         # logic to decrease supply - by date of expiration or penalty cost?
         # for all supplies at current node ordered by max_date, penalty decreased:
-        qty_loaded, cost_incured, remove_supply = self.decrease_supply(self.supply_mgr, self.current_day) 
-        # remove supply, continue to the next if there is qty_loaded < qty
-    
+        if qty > 0.01: 
+            # for all demands at current node ordered by max_date, profit decreased:
+            if vessel.current_node is None:
+                return LOAD_NOT_AT_NODE_PENALTY
+        
+            node_supply = self.supply_mgr[vessel.current_node.id]
+            supply_to_remove = {}
+            for supply in node_supply:
+                qty_loaded, cost_incured, remove_supply = self.decrease_supply(supply, qty) 
+                vessel.update_demand_cost(cost_incured)
+                # remove supply, continue to the next if there is qty_loaded < qty
+                if remove_supply: 
+                    supply_to_remove.append(supply)
+                    if abs(qty_loaded - qty) < 0.01:
+                        break
+                    else:
+                        qty -= qty_loaded
+
+            for s in supply_to_remove:
+                self.supply_mgr.remove(s) 
+            
+            vessel.next_node = next_node
+            return 0
+        else: 
+            return PENALTY_FOR_LOAD_ZERO_QTY
+
+
     def decrease_supply(self, supply, qty):
-        qty_loaded, cost_incured, remove_supply = supply.decrease_supply(qty, self.current_date)
+        qty_loaded, cost_incured, remove_supply = supply.decrease_supply(qty, self.current_day)
         return qty_loaded, cost_incured, remove_supply
 
     def go_to(self, vessel, next_node):

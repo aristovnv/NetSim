@@ -21,7 +21,7 @@ class Supply:
     def calculate_penalty(self, supply_day, qty):
         if supply_day > self.end_date:
                 #penalty
-            days = (supply_day - self.end_date).days
+            days = (supply_day - self.end_date)
             return (self.lump_penalty + days * self.day_penalty) * qty
         return 0
     

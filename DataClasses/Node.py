@@ -7,6 +7,7 @@ class Node:
     vessels_at_berth = None    
     demand_at_node = None
     supply_at_node = None
+
     def __init__(self, id, **kwargs):
         self.id = id
         self.type = kwargs.get('node_type', 'intermediate')
@@ -60,13 +61,16 @@ class Node:
         # Store any additional attributes
         self.additional_attributes = kwargs
 
+        self.vessels_at_node = kwargs.get("vessels_at_node", {})
+        self.vessels_at_berth = kwargs.get("vessels_at_berth", {})
+        self.demand_at_node = kwargs.get("demand_at_node", {})
+        self.supply_at_node = kwargs.get("supply_at_node", {})
         #processing pops
-        self.vessel_map = {vessel.id: vessel for vessel in self.vessels}
-
-        self.vessels_at_node_map = {vessel.id: vessel for vessel in self.vessels_at_node_map}
-        self.vessels_at_berth_map = {vessel.id: vessel for vessel in self.vessels_at_berth_map}
-        self.demand_at_node_map = {demand.id: demand for demand in self.demand_at_node_map}
-        self.supply_at_node_map = {supply.id: supply for supply in self.supply_at_node_map}
+        
+        self.vessels_at_node_map = {vessel.id: vessel for vessel in self.vessels_at_node}
+        self.vessels_at_berth_map = {vessel.id: vessel for vessel in self.vessels_at_berth}
+        self.demand_at_node_map = {demand.id: demand for demand in self.demand_at_node}
+        self.supply_at_node_map = {supply.id: supply for supply in self.supply_at_node}
 
 
     def __str__(self):

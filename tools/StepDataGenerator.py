@@ -204,12 +204,12 @@ class StepDataGenerator:
                 
                 # Generate dates - start tomorrow, end after random days
                 days_start_from_now = max(1, 10 + int(self._randn(self.params["days_min_mean"], self.params["days_min_std"])))
-                start_date = current_date + timedelta(days=days_start_from_now)
+                start_date = current_date.add_days(days_start_from_now)
                 days_duration = max(1, days_start_from_now + 11, 10 + int(self._randn(self.params["days_max_mean"], self.params["days_max_std"])))  # Using reasonable defaults
-                end_date = start_date + timedelta(days=days_duration)
+                end_date = start_date.add_days(days=days_duration)
                 
                 # Generate ID with date format
-                date_str = current_date.strftime("%Y%m%d")
+                date_str = current_date.isoformat()
                 demand_id = f"demand_{node.id}_{date_str}_{i}"
                 
                 demands.append(Demand(
@@ -253,13 +253,13 @@ class StepDataGenerator:
                 
                 # Generate dates - start tomorrow, end after random days
                 days_start_from_now = max(1, int(self._randn(self.params["days_min_mean"], self.params["days_min_std"])))
-                start_date = current_date + timedelta(days=days_start_from_now)
+                start_date = current_date.add_days(days_start_from_now)
                 days_duration = max(1, days_start_from_now + 1, int(self._randn(self.params["days_max_mean"], self.params["days_max_std"])))  # Using reasonable defaults
-                end_date = start_date + timedelta(days=days_duration)
+                end_date = start_date.add_days(days_duration)
                 
                 # Generate ID with date format
-                date_str = current_date.strftime("%Y%m%d")
-                supply_id = f"demand_{node.id}_{date_str}_{i}"
+                date_str = current_date.isoformat()
+                supply_id = f"supply_{node.id}_{date_str}_{i}"
                 
                 supplies.append(Supply(
                     id=supply_id,
